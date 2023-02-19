@@ -28,12 +28,25 @@ public class DocFinder {
         var allDocs = collectDocs();
 
         var results = new ArrayList<Result>();
-        for (var doc : allDocs) {
-            var res = findInDoc(searchText, doc);
+
+        allDocs.parallelStream().forEach(doc->{
+            Result res = null;
+            try {
+                res = findInDoc(searchText, doc);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
             if (res.totalHits() > 0) {
                 results.add(res);
             }
-        }
+        });
+
+//        for (var doc : allDocs) {
+//            var res = findInDoc(searchText, doc);
+//            if (res.totalHits() > 0) {
+//                results.add(res);
+//            }
+//        }
 
         results.sort(comparing(Result::getRelevance, reverseOrder()));
 
