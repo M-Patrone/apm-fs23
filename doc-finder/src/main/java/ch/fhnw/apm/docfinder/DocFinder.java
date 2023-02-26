@@ -5,7 +5,13 @@ import java.nio.charset.MalformedInputException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 import static java.util.Comparator.comparing;
@@ -29,17 +35,29 @@ public class DocFinder {
 
         var results = new ArrayList<Result>();
 
-        allDocs.parallelStream().forEach(doc->{
-            Result res = null;
-            try {
-                res = findInDoc(searchText, doc);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            if (res.totalHits() > 0) {
-                results.add(res);
-            }
-        });
+        var executor = Executors.newFixedThreadPool(8); //anzahl cores
+        for (var doc : allDocs) {
+            executor.submit(() -> {
+                Result res = null;
+                try {
+                    res = findInDoc(searchText, doc);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+
+                if (res.totalHits() > 0) {
+                    synchronized (results) {
+                        results.add(res);
+                    }
+                }
+            });
+        }
+        executor.shutdown();
+        try {
+            executor.awaitTermination(1, TimeUnit.HOURS);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
 
 //        for (var doc : allDocs) {
 //            var res = findInDoc(searchText, doc);
@@ -53,6 +71,7 @@ public class DocFinder {
         return results;
     }
 
+
     private List<Path> collectDocs() throws IOException {
         try (var docs = Files.find(rootDir, maxDepth, this::include)) {
             return docs.toList();
@@ -61,7 +80,7 @@ public class DocFinder {
 
     private boolean include(Path path, BasicFileAttributes attr) {
         return attr.isRegularFile()
-                && attr.size() <= sizeLimit;
+            && attr.size() <= sizeLimit;
     }
 
     private Result findInDoc(String searchText, Path doc) throws IOException {
@@ -93,11 +112,11 @@ public class DocFinder {
         }
 
         var parts = searchText
-                .replaceFirst("^\\p{javaWhitespace}", "") // prevent leading empty part
-                .split("\\p{javaWhitespace}+");
+            .replaceFirst("^\\p{javaWhitespace}", "") // prevent leading empty part
+            .split("\\p{javaWhitespace}+");
         return Stream.of(parts)
-                .distinct() // eliminate duplicates
-                .toList();
+            .distinct() // eliminate duplicates
+            .toList();
     }
 
     private Map<String, List<Integer>> findInText(List<String> searchTerms, String text) {
@@ -123,11 +142,11 @@ public class DocFinder {
             return 0;
         }
         var avgHits = searchHits.values().stream()
-                .mapToDouble(List::size)
-                .average().orElse(1);
+            .mapToDouble(List::size)
+            .average().orElse(1);
         var termsWithHits = searchHits.values().stream()
-                .filter(list -> list.size() > 0)
-                .count();
+            .filter(list -> list.size() > 0)
+            .count();
         var termHitRatio = (double) termsWithHits / searchHits.size();
         return Math.pow(avgHits + 1, termHitRatio) / text.length() * 1_000_000;
     }
