@@ -93,9 +93,20 @@ public class DocFinder {
 
         // normalize text: collapse whitespace and convert to lowercase
         //var collapsed =  text.replaceAll("\\p{javaWhitespace}+", " ");
-        Pattern pattern = Pattern.compile("\\p{javaWhitespace}+"    );
-        Matcher matcher = pattern.matcher(text);
-        String collapsed = matcher.replaceAll(" ");
+        //Pattern pattern = Pattern.compile("\\p{javaWhitespace}+"    );
+       // Matcher matcher = pattern.matcher(text);
+       // String collapsed = matcher.replaceAll(" ");
+        //var collapsed = text.replaceAll("\\p{javaWhitespace}+", " ");
+
+        StringBuilder sb = new StringBuilder(text);
+        for (int i = 0; i < sb.length(); i++) {
+            if (Character.isWhitespace(sb.charAt(i))) {
+                sb.setCharAt(i, ' ');
+            }
+        }
+        String collapsed = sb.toString();
+
+
         var normalized = collapsed;
         if (ignoreCase) {
             normalized = collapsed.toLowerCase(Locale.ROOT);
