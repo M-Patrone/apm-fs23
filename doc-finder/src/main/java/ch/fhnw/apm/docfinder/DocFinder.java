@@ -47,13 +47,15 @@ public class DocFinder {
 
     public List<Result> findDocs(String searchText) throws IOException {
         var allDocs = collectDocs();
+        var searchTerms = parseSearchText(searchText);
+        final String mSearchText = ignoreCase? searchText.toLowerCase(Locale.ROOT): searchText;
 
         var results = synchronizedList(new ArrayList<Result>());
 
         var tasks = new ArrayList<Callable<Void>>();
         for (var doc : allDocs) {
             tasks.add(() -> {
-                var res = findInDoc(searchText, doc);
+                var res = findInDoc(mSearchText, doc,searchTerms);
                 if (res.totalHits() > 0) {
                     results.add(res);
                 }
@@ -82,7 +84,7 @@ public class DocFinder {
             && attr.size() <= sizeLimit;
     }
 
-    private Result findInDoc(String searchText, Path doc) throws IOException {
+    private Result findInDoc(String searchText, Path doc,List<String> searchTerms) throws IOException {
         String text;
         try {
             text = Files.readString(doc);
@@ -110,10 +112,10 @@ public class DocFinder {
         var normalized = collapsed;
         if (ignoreCase) {
             normalized = collapsed.toLowerCase(Locale.ROOT);
-            searchText = searchText.toLowerCase(Locale.ROOT);
+            //searchText = searchText.toLowerCase(Locale.ROOT); //2.Operation von Mantra
         }
 
-        var searchTerms = parseSearchText(searchText);
+        //var searchTerms = parseSearchText(searchText); //2.Operation von Mantra
         var searchHits = findInText(searchTerms, normalized);
         var relevance = computeRelevance(searchHits, normalized);
         return new Result(doc, searchHits, relevance);
@@ -146,6 +148,23 @@ public class DocFinder {
             }
             searchHits.put(term, hits);
         }
+        return searchHits;
+    }
+
+    private Map<String, List<Integer>> findInText_Regex(List<String> searchTerms, String text) {
+        Map<String, List<Integer>> searchHits = new LinkedHashMap<>();
+        Set<String> uniqueSearchTerms = new HashSet<>(searchTerms);
+        Pattern pattern = Pattern.compile(String.join("|", uniqueSearchTerms));
+
+        Matcher matcher = pattern.matcher(text);
+        while (matcher.find()) {
+            String term = matcher.group();
+            if (!searchHits.containsKey(term)) {
+                searchHits.put(term, new ArrayList<>());
+            }
+            searchHits.get(term).add(matcher.start());
+        }
+
         return searchHits;
     }
 
