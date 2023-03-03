@@ -7,7 +7,7 @@ import java.util.stream.DoubleStream;
 
 public class DocFinderPerfTester {
 
-    private static final int REPETITIONS = 30;
+    private static final int REPETITIONS = 120;
     public static final String SEARCH_TEXT = "woman friend cat";
 
     public static void main(String[] args) throws IOException {

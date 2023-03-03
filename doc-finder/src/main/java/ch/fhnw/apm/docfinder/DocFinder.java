@@ -5,15 +5,15 @@ import java.nio.charset.MalformedInputException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import static java.util.Collections.synchronizedList;
 import static java.util.Comparator.comparing;
 import static java.util.Comparator.reverseOrder;
 import static java.util.Objects.requireNonNull;
@@ -26,51 +26,50 @@ public class DocFinder {
     private long sizeLimit = 1_000_000_000; // 1 GB
     private boolean ignoreCase = true;
 
+    private final ExecutorService pool;
+
     public DocFinder(Path rootDir) {
+        this(rootDir, Runtime.getRuntime().availableProcessors());
+
+        System.out.println("********ANZAHL PROZESSOREN START********");
+        System.out.println(Runtime.getRuntime().availableProcessors());
+        System.out.println("********ANZAHL PROZESSOREN END********");
+    }
+
+    public DocFinder(Path rootDir, int parallelism) {
         this.rootDir = requireNonNull(rootDir);
+        pool = Executors.newFixedThreadPool(parallelism, r -> {
+            var thread = new Thread(r);
+            thread.setDaemon(true);
+            return thread;
+        });
     }
 
     public List<Result> findDocs(String searchText) throws IOException {
         var allDocs = collectDocs();
 
-        var results = new ArrayList<Result>();
+        var results = synchronizedList(new ArrayList<Result>());
 
-        var executor = Executors.newFixedThreadPool(8); //anzahl cores
+        var tasks = new ArrayList<Callable<Void>>();
         for (var doc : allDocs) {
-            executor.submit(() -> {
-                Result res = null;
-                try {
-                    res = findInDoc(searchText, doc);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-
+            tasks.add(() -> {
+                var res = findInDoc(searchText, doc);
                 if (res.totalHits() > 0) {
-                    synchronized (results) {
-                        results.add(res);
-                    }
+                    results.add(res);
                 }
+                return null;
             });
         }
-        executor.shutdown();
         try {
-            executor.awaitTermination(1, TimeUnit.HOURS);
+            pool.invokeAll(tasks);
         } catch (InterruptedException e) {
-            throw new RuntimeException(e);
+            throw new AssertionError(e);
         }
-
-//        for (var doc : allDocs) {
-//            var res = findInDoc(searchText, doc);
-//            if (res.totalHits() > 0) {
-//                results.add(res);
-//            }
-//        }
 
         results.sort(comparing(Result::getRelevance, reverseOrder()));
 
         return results;
     }
-
 
     private List<Path> collectDocs() throws IOException {
         try (var docs = Files.find(rootDir, maxDepth, this::include)) {
@@ -89,11 +88,25 @@ public class DocFinder {
             text = Files.readString(doc);
         } catch (MalformedInputException e) {
             // in case doc cannot be read as UTF-8, ignore and use empty dummy text
-            text = "";
+            text = ("");
         }
 
         // normalize text: collapse whitespace and convert to lowercase
-        var collapsed = text.replaceAll("\\p{javaWhitespace}+", " ");
+        //var collapsed =  text.replaceAll("\\p{javaWhitespace}+", " ");
+        //Pattern pattern = Pattern.compile("\\p{javaWhitespace}+"    );
+       // Matcher matcher = pattern.matcher(text);
+       // String collapsed = matcher.replaceAll(" ");
+        //var collapsed = text.replaceAll("\\p{javaWhitespace}+", " ");
+
+        StringBuilder sb = new StringBuilder(text);
+        for (int i = 0; i < sb.length(); i++) {
+            if (Character.isWhitespace(sb.charAt(i))) {
+                sb.setCharAt(i, ' ');
+            }
+        }
+        String collapsed = sb.toString();
+
+
         var normalized = collapsed;
         if (ignoreCase) {
             normalized = collapsed.toLowerCase(Locale.ROOT);
