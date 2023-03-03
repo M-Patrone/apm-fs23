@@ -111,7 +111,8 @@ public class DocFinder {
 
         var normalized = collapsed;
         if (ignoreCase) {
-            normalized = collapsed.toLowerCase(Locale.ROOT);
+            //normalized = collapsed.toLowerCase(Locale.ROOT);
+            normalized = toLowerCase(collapsed);
             //searchText = searchText.toLowerCase(Locale.ROOT); //2.Operation von Mantra
         }
 
@@ -150,6 +151,22 @@ public class DocFinder {
         }
         return searchHits;
     }
+
+    public String toLowerCase(String str) {
+        StringBuilder sb = new StringBuilder(str.length());
+
+        for (int i = 0; i < str.length(); i++) {
+            char c = str.charAt(i);
+            if (c >= 'A' && c <= 'Z') {
+                sb.append((char) (c + 32));
+            } else {
+                sb.append(c);
+            }
+        }
+
+        return sb.toString();
+    }
+
 
     private Map<String, List<Integer>> findInText_Regex(List<String> searchTerms, String text) {
         Map<String, List<Integer>> searchHits = new LinkedHashMap<>();
