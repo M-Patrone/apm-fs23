@@ -26,19 +26,25 @@ public class DocFinderBenchmarks {
 //        System.out.println("Hello, JMH!");
 //    }
 
-    public final String SEARCH_TEXT = "woman friend cat";
+    @Param({"cat","one cat women penguin and pirate sun moon rain table"})
+    public  String SEARCH_TEXT;
+    @Param({"1","128"})
+    public int countOfThreads;
+    @Param({"true","false"})
+    public boolean ignoreCase;
     public DocFinder finder;
 
     @Setup
     public void setUp(){
         var booksDir = Path.of("perf-tests/books").toAbsolutePath();
-        this.finder=new DocFinder(booksDir);;
+        this.finder=new DocFinder(booksDir,8);
     }
     @Benchmark
     @BenchmarkMode(Mode.SampleTime)
     @Warmup(iterations = 2)
     @Measurement(iterations = 3, time = 20)
     public List<Result> docFinderJmh() throws IOException {
-        return finder.findDocs(SEARCH_TEXT);
+        this.finder.setIgnoreCase(ignoreCase);
+        return finder.findDocs(SEARCH_TEXT,countOfThreads);
     }
 }

@@ -24,7 +24,7 @@ public class DocFinder {
     private long sizeLimit = 1_000_000_000; // 1 GB
     private boolean ignoreCase = true;
 
-    private final ExecutorService pool;
+    private ExecutorService pool;
 
     public DocFinder(Path rootDir) {
         this(rootDir, Runtime.getRuntime().availableProcessors());
@@ -32,14 +32,14 @@ public class DocFinder {
 
     public DocFinder(Path rootDir, int parallelism) {
         this.rootDir = requireNonNull(rootDir);
+    }
+
+    public List<Result> findDocs(String searchText,int parallelism) throws IOException {
         pool = Executors.newFixedThreadPool(parallelism, r -> {
             var thread = new Thread(r);
             thread.setDaemon(true);
             return thread;
         });
-    }
-
-    public List<Result> findDocs(String searchText) throws IOException {
         var allDocs = collectDocs();
 
         var results = synchronizedList(new ArrayList<Result>());
@@ -86,7 +86,8 @@ public class DocFinder {
         }
 
         // normalize text: collapse whitespace and convert to lowercase
-        var collapsed = text.replaceAll("\\p{javaWhitespace}+", " ");
+        //var collapsed = text.replaceAll("\\p{javaWhitespace}+", " "); braucht man nach heutiger Lektion gar nicht
+        var collapsed = text;
         var normalized = collapsed;
         if (ignoreCase) {
             normalized = collapsed.toLowerCase(Locale.ROOT);

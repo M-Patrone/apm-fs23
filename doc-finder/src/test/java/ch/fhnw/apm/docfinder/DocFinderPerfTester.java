@@ -24,7 +24,7 @@ public class DocFinderPerfTester {
         for (int i = 0; i < REPETITIONS; i++) {
             var startTime = System.nanoTime();
 
-            finder.findDocs(SEARCH_TEXT);
+            finder.findDocs(SEARCH_TEXT,0);
 
             var latency = System.nanoTime() - startTime;
             latencies[i] = latency / 1_000_000.0; // convert to ms
