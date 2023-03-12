@@ -66,7 +66,7 @@ public class DocFinderCli {
 
     private void search(String line) throws IOException {
         var searchTerms = line.substring("search ".length()).strip();
-        var results = finder.findDocs(searchTerms);
+        var results = finder.findDocs(searchTerms,1);
         for (var res : results) {
             System.out.println(res.getDoc());
             System.out.format("  Relevance: %.1f\n", res.getRelevance());

@@ -6,8 +6,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.Stream;
 
+import static java.util.Collections.synchronizedList;
 import static java.util.Comparator.comparing;
 import static java.util.Comparator.reverseOrder;
 import static java.util.Objects.requireNonNull;
@@ -20,33 +24,41 @@ public class DocFinder {
     private long sizeLimit = 1_000_000_000; // 1 GB
     private boolean ignoreCase = true;
 
+    private ExecutorService pool;
+
     public DocFinder(Path rootDir) {
+        this(rootDir, Runtime.getRuntime().availableProcessors());
+    }
+
+    public DocFinder(Path rootDir, int parallelism) {
         this.rootDir = requireNonNull(rootDir);
     }
 
-    public List<Result> findDocs(String searchText) throws IOException {
+    public List<Result> findDocs(String searchText,int parallelism) throws IOException {
+        pool = Executors.newFixedThreadPool(parallelism, r -> {
+            var thread = new Thread(r);
+            thread.setDaemon(true);
+            return thread;
+        });
         var allDocs = collectDocs();
 
-        var results = new ArrayList<Result>();
+        var results = synchronizedList(new ArrayList<Result>());
 
-        allDocs.parallelStream().forEach(doc->{
-            Result res = null;
-            try {
-                res = findInDoc(searchText, doc);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            if (res.totalHits() > 0) {
-                results.add(res);
-            }
-        });
-
-//        for (var doc : allDocs) {
-//            var res = findInDoc(searchText, doc);
-//            if (res.totalHits() > 0) {
-//                results.add(res);
-//            }
-//        }
+        var tasks = new ArrayList<Callable<Void>>();
+        for (var doc : allDocs) {
+            tasks.add(() -> {
+                var res = findInDoc(searchText, doc);
+                if (res.totalHits() > 0) {
+                    results.add(res);
+                }
+                return null;
+            });
+        }
+        try {
+            pool.invokeAll(tasks);
+        } catch (InterruptedException e) {
+            throw new AssertionError(e);
+        }
 
         results.sort(comparing(Result::getRelevance, reverseOrder()));
 
@@ -74,7 +86,8 @@ public class DocFinder {
         }
 
         // normalize text: collapse whitespace and convert to lowercase
-        var collapsed = text.replaceAll("\\p{javaWhitespace}+", " ");
+        //var collapsed = text.replaceAll("\\p{javaWhitespace}+", " "); braucht man nach heutiger Lektion gar nicht
+        var collapsed = text;
         var normalized = collapsed;
         if (ignoreCase) {
             normalized = collapsed.toLowerCase(Locale.ROOT);
