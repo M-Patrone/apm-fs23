@@ -28,7 +28,7 @@ public class DocFinderBenchmarks {
 
     //@Param({"cat","one cat women penguin and pirate sun moon rain table"})
     public  String SEARCH_TEXT="woman friend cat";
-    @Param({"8"})
+    @Param({"1","2","4","8","16","32","64","128"})
     public int countOfThreads;
     //@Param({"true","false"})
     public boolean ignoreCase=false;
@@ -37,12 +37,12 @@ public class DocFinderBenchmarks {
     @Setup
     public void setUp(){
         var booksDir = Path.of("perf-tests/books").toAbsolutePath();
-        this.finder=new DocFinder(booksDir,8);
+        this.finder=new DocFinder(booksDir,countOfThreads);
     }
     @Benchmark
     @BenchmarkMode(Mode.Throughput)
     @Warmup(iterations = 2)
-    @Measurement(iterations = 3, time = 100)
+    @Measurement(iterations = 3, time = 20)
     public List<Result> docFinderJmh() throws IOException {
         this.finder.setIgnoreCase(ignoreCase);
         return finder.findDocs(SEARCH_TEXT,countOfThreads);
