@@ -6,10 +6,9 @@ import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.IOException;
-import java.io.UncheckedIOException;
+import java.io.*;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Random;
@@ -20,6 +19,9 @@ import static java.nio.file.Files.newOutputStream;
 
 @State(Scope.Benchmark)
 public class FileIOBenchmarks {
+
+    @Param({"512","8192","32768"})
+    private int bufferSize;
 
     private static final Path BASE_DIR = Path.of("files");
 
@@ -60,67 +62,112 @@ public class FileIOBenchmarks {
         return BASE_DIR.resolve("file-" + size + ".bin");
     }
 
+//    @Benchmark
+//    @BenchmarkMode(Mode.SampleTime)
+//    @Warmup(iterations = 1)
+//    @Measurement(iterations = 5)
+//    public int read() throws IOException {
+//        try (var in = (Files.newInputStream(file(5_000_000))) ) { //hinzufügen von BufferedInputstream
+//            int byteZeroCount = 0;
+//            while(true) {
+//                var bytes = in.readNBytes(8192); //buffer grösse
+//                if(bytes.length == 0){
+//                    break;
+//                }
+//                for (byte b : bytes) {
+//                    if (b == 0) {
+//                        byteZeroCount++;
+//                    }
+//                }
+//            }
+//            return byteZeroCount;
+//        }
+//    }
+//    @Param({"512","8192","32768"})
+//    private int bufferSize;
+//    @Benchmark
+//    @BenchmarkMode(Mode.SampleTime)
+//    @Warmup(iterations = 1)
+//    @Measurement(iterations = 5)
+//    public int readByteWithBufferSize() throws IOException {
+//        try (var in = (Files.newInputStream(file(5_000_000))) ) { //hinzufügen von BufferedInputstream
+//            int byteZeroCount = 0;
+//            while(true) {
+//                var bytes = in.readNBytes(bufferSize); //buffer grösse
+//                if(bytes.length == 0){
+//                    break;
+//                }
+//                for (byte b : bytes) {
+//                    if (b == 0) {
+//                        byteZeroCount++;
+//                    }
+//                }
+//            }
+//            return byteZeroCount;
+//        }
+//    }
+//    @Benchmark
+//    @BenchmarkMode(Mode.SampleTime)
+//    @Warmup(iterations = 1)
+//    @Measurement(iterations = 5)
+//    public int readByteWithBuffer() throws IOException {
+//        try (var in = Files.newInputStream(file(5_000_000))) {
+//            int byteZeroCount = 0;
+//            int byteCount;
+//            byte[] buffer = new byte[bufferSize];
+//            while ((byteCount = in.read(buffer)) >= 0) {
+//                for (int i = 0; i < byteCount; i++) {
+//                    if (buffer[i] == 0) {
+//                        byteZeroCount++;
+//                    }
+//                }
+//            }
+//            return byteZeroCount;
+//        }
+//    }
+
     @Benchmark
     @BenchmarkMode(Mode.SampleTime)
     @Warmup(iterations = 1)
-    @Measurement(iterations = 5)
-    public int read() throws IOException {
-        try (var in = (Files.newInputStream(file(5_000_000))) ) { //hinzufügen von BufferedInputstream
-            int byteZeroCount = 0;
-            while(true) {
-                var bytes = in.readNBytes(8192); //buffer grösse
-                if(bytes.length == 0){
-                    break;
+    @Measurement(iterations = 1)
+    public int readBufferedNioNoBufferWrapper() throws IOException {
+        try ( var fin =  new FileInputStream(file(5_000_000).toFile());
+              FileChannel fcin = fin.getChannel();
+        ){
+            ByteBuffer buffer = ByteBuffer.allocate( bufferSize );
+            int bytesRead;
+            do {
+                bytesRead = fcin.read(buffer);
+                if (bytesRead > 0) {
+                    // Do something with the data in the buffer
+                    buffer.flip();
+                    buffer.clear();
                 }
-                for (byte b : bytes) {
-                    if (b == 0) {
-                        byteZeroCount++;
-                    }
-                }
-            }
-            return byteZeroCount;
+            } while (bytesRead != -1);
+            return bytesRead;
         }
     }
-    @Param({"512","8192","32768"})
-    private int bufferSize;
     @Benchmark
     @BenchmarkMode(Mode.SampleTime)
     @Warmup(iterations = 1)
-    @Measurement(iterations = 5)
-    public int readByteWithBufferSize() throws IOException {
-        try (var in = (Files.newInputStream(file(5_000_000))) ) { //hinzufügen von BufferedInputstream
-            int byteZeroCount = 0;
-            while(true) {
-                var bytes = in.readNBytes(bufferSize); //buffer grösse
-                if(bytes.length == 0){
-                    break;
+    @Measurement(iterations = 1)
+    public int readBufferedNioBufferWrapper() throws IOException {
+        try (var fin =  new FileInputStream(file(5_000_000).toFile());
+             FileChannel fcin = fin.getChannel();
+        ){
+            //sollte effizienter sein, da kein kopieren notwendig ist
+            byte[] array = new byte[bufferSize];
+            ByteBuffer buffer = ByteBuffer.wrap(array);
+            int bytesRead;
+            do {
+                bytesRead = fcin.read(buffer);
+                if (bytesRead > 0) {
+                    // Do something with the data in the buffer
+                    buffer.flip();
+                    buffer.clear();
                 }
-                for (byte b : bytes) {
-                    if (b == 0) {
-                        byteZeroCount++;
-                    }
-                }
-            }
-            return byteZeroCount;
-        }
-    }
-    @Benchmark
-    @BenchmarkMode(Mode.SampleTime)
-    @Warmup(iterations = 1)
-    @Measurement(iterations = 5)
-    public int readByteWithBuffer() throws IOException {
-        try (var in = Files.newInputStream(file(5_000_000))) {
-            int byteZeroCount = 0;
-            int byteCount;
-            byte[] buffer = new byte[bufferSize];
-            while ((byteCount = in.read(buffer)) >= 0) {
-                for (int i = 0; i < byteCount; i++) {
-                    if (buffer[i] == 0) {
-                        byteZeroCount++;
-                    }
-                }
-            }
-            return byteZeroCount;
+            } while (bytesRead != -1);
+            return bytesRead;
         }
     }
 
