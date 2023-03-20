@@ -18,6 +18,7 @@ import java.util.Set;
 import static java.nio.file.Files.exists;
 import static java.nio.file.Files.newOutputStream;
 
+@State(Scope.Benchmark)
 public class FileIOBenchmarks {
 
     private static final Path BASE_DIR = Path.of("files");
@@ -65,7 +66,6 @@ public class FileIOBenchmarks {
     @Measurement(iterations = 5)
     public int read() throws IOException {
         try (var in = (Files.newInputStream(file(5_000_000))) ) { //hinzufügen von BufferedInputstream
-
             int byteZeroCount = 0;
             while(true) {
                 var bytes = in.readNBytes(8192); //buffer grösse
@@ -74,6 +74,48 @@ public class FileIOBenchmarks {
                 }
                 for (byte b : bytes) {
                     if (b == 0) {
+                        byteZeroCount++;
+                    }
+                }
+            }
+            return byteZeroCount;
+        }
+    }
+    @Param({"512","8192","32768"})
+    private int bufferSize;
+    @Benchmark
+    @BenchmarkMode(Mode.SampleTime)
+    @Warmup(iterations = 1)
+    @Measurement(iterations = 5)
+    public int readByteWithBufferSize() throws IOException {
+        try (var in = (Files.newInputStream(file(5_000_000))) ) { //hinzufügen von BufferedInputstream
+            int byteZeroCount = 0;
+            while(true) {
+                var bytes = in.readNBytes(bufferSize); //buffer grösse
+                if(bytes.length == 0){
+                    break;
+                }
+                for (byte b : bytes) {
+                    if (b == 0) {
+                        byteZeroCount++;
+                    }
+                }
+            }
+            return byteZeroCount;
+        }
+    }
+    @Benchmark
+    @BenchmarkMode(Mode.SampleTime)
+    @Warmup(iterations = 1)
+    @Measurement(iterations = 5)
+    public int readByteWithBuffer() throws IOException {
+        try (var in = Files.newInputStream(file(5_000_000))) {
+            int byteZeroCount = 0;
+            int byteCount;
+            byte[] buffer = new byte[bufferSize];
+            while ((byteCount = in.read(buffer)) >= 0) {
+                for (int i = 0; i < byteCount; i++) {
+                    if (buffer[i] == 0) {
                         byteZeroCount++;
                     }
                 }
