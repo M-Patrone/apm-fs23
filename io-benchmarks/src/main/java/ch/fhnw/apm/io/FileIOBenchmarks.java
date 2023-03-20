@@ -6,6 +6,7 @@ import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -63,12 +64,18 @@ public class FileIOBenchmarks {
     @Warmup(iterations = 1)
     @Measurement(iterations = 5)
     public int read() throws IOException {
-        try (var in = Files.newInputStream(file(5_000_000))) {
+        try (var in = (Files.newInputStream(file(5_000_000))) ) { //hinzufügen von BufferedInputstream
+
             int byteZeroCount = 0;
-            int b;
-            while ((b = in.read()) >= 0) {
-                if (b == 0) {
-                    byteZeroCount++;
+            while(true) {
+                var bytes = in.readNBytes(8192); //buffer grösse
+                if(bytes.length == 0){
+                    break;
+                }
+                for (byte b : bytes) {
+                    if (b == 0) {
+                        byteZeroCount++;
+                    }
                 }
             }
             return byteZeroCount;
