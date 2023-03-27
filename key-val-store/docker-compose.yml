@@ -1,0 +1,12 @@
+version: "3.9"
+#definiert eine gruppe von container die zusammen etwas sinnvolles macht
+services:
+  web-app:
+    build: . # heisst build aktuelles docker file
+    deploy:
+      replicas: 2 #automatisch 2 container starten
+  load-balancer:
+    build: load-balancer #bedeutet es muss einen unterordner geben. nicht zugreifen direkt auf container
+    ports:
+      - 8080:8080
+# compose startet serie von docker commands
