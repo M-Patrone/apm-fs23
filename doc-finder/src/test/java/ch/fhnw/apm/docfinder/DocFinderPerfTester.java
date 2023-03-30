@@ -3,11 +3,13 @@ package ch.fhnw.apm.docfinder;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.stream.DoubleStream;
 
 public class DocFinderPerfTester {
 
-    private static final int REPETITIONS = 30;
+    private static final int REPETITIONS = 100;
     public static final String SEARCH_TEXT = "woman friend cat";
 
     public static void main(String[] args) throws IOException {
@@ -18,13 +20,14 @@ public class DocFinderPerfTester {
             System.exit(1);
         }
 
-        var finder = new DocFinder(booksDir);
+        var finder = new DocFinder(booksDir, 8);
+        List<Result> result = new ArrayList<>();
 
         var latencies = new double[REPETITIONS];
         for (int i = 0; i < REPETITIONS; i++) {
             var startTime = System.nanoTime();
 
-            finder.findDocs(SEARCH_TEXT);
+            result = finder.findDocs(SEARCH_TEXT);
 
             var latency = System.nanoTime() - startTime;
             latencies[i] = latency / 1_000_000.0; // convert to ms
@@ -45,5 +48,8 @@ public class DocFinderPerfTester {
         System.out.printf("Average: %.1f ms\n", stats.getAverage());
         System.out.printf("Min: %.1f ms\n", stats.getMin());
         System.out.printf("Max: %.1f ms\n", stats.getMax());
+
+        System.out.println("size: "+result.size());
     }
+
 }
