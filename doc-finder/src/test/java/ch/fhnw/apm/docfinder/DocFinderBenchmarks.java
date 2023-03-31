@@ -20,10 +20,11 @@ public class DocFinderBenchmarks {
 
     @Param({"16","128"})
     public int threads;
-    @Param({"woman","woman friend cat help test b"})
+    //@Param({"woman","woman friend cat help test b"})
+    @Param({"woman friend cat"})
     public String searchText;
 
-    @Param({"false","true"})
+    @Param({"true"})
     public boolean ignoreCase;
 
     @Setup
