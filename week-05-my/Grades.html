@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Grade Calculator</title>
+    <style>
+        .two-column-layout{
+            display:                grid;
+            grid-template-columns:  max-content max-content;
+            gap:                    0.5em 2em;
+        }
+        input:invalid{
+            background-color: red;
+        }
+    </style>
+</head>
+<body>
+    <div id="moduleInfoContainer" class="two-column-layout">
+        <script>
+        const root = document.getElementById("moduleInfoContainer");
+
+
+
+
+            const writeModuleInfo = root=> ({moduleName,moduleGrade},moduleNr) =>{
+                root.innerHTML +=(`
+            <div>
+            <label for="module-${moduleNr}-name"></label>
+            <input  id="module-${moduleNr}-name" type="text" value="${moduleName}">
+        </div>
+        <div>
+            <label for="module-${moduleNr}-grade"></label>
+            <input  id="module-${moduleNr}-grade" type="number" min="1.0" max="6.0" step="0.1"
+             value="${moduleGrade}"
+             oninput="moduleInfos[${moduleNr}].moduleGrade=this.value;updateAverage()"
+             required>
+        </div>
+            `);
+            };
+            const moduleInfos = [
+                {moduleName:"Web Clients",moduleGrade:      "6.0"},
+                {moduleName:"Web Programming",moduleGrade:  "5.0"}
+            ];
+            const writeModuleInfoToRoot = writeModuleInfo(root);
+            moduleInfos.forEach( writeModuleInfoToRoot);
+
+            const updateAverage = ()=>{
+                const averageGrad = moduleInfos.reduce((acc,cur) => acc+Number(cur.moduleGrade),0)/moduleInfos.length;
+                document.getElementById("average").textContent = String(averageGrad);
+            }
+        </script>
+
+        <div>Durchschnitt</div>
+        <div><output id="average">5.5</output></div>
+
+    </div>
+</body>
+</html>
