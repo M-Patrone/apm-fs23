@@ -1,0 +1,40 @@
+version: "3.9"
+
+services:
+  entry-point:
+    build: entry-point
+    ports:
+      - "8080:8080"
+  load-balancer-master:
+    build:
+      context: load-balancer
+      args:
+        role: master
+    cap_add:
+      - NET_ADMIN
+  load-balancer-backup:
+    build:
+      context: load-balancer
+      args:
+        role: backup
+    cap_add:
+      - NET_ADMIN
+  web-app-1:
+    build: .
+    deploy:
+      replicas: 1
+    ports:
+       - 8082:8080
+  web-app-2:
+    build: .
+    deploy:
+      replicas: 1
+    ports:
+      - 8083:8080
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.19.0.0/16
+          gateway: 172.19.0.1
