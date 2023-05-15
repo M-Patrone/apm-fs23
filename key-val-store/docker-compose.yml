@@ -1,0 +1,37 @@
+version: "3.9"
+#definiert eine gruppe von container die zusammen etwas sinnvolles macht
+services:
+  web-app:
+    build: . # heisst build aktuelles docker file
+    deploy:
+      replicas: 2 #automatisch 2 container starten
+  proxy:
+    build:
+      context: proxy
+    ports:
+      - 8080:8080
+    cap_add:
+      - NET_ADMIN
+  load-balancer-master:
+    build:
+      context: load-balancer
+      args:
+        role: master
+    cap_add:
+      - NET_ADMIN
+  load-balancer-backup:
+    build:
+      context: load-balancer
+      args:
+        role: backup
+    cap_add:
+      - NET_ADMIN
+
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.19.0.0/16
+          gateway: 172.19.0.1
+# compose startet serie von docker commands
