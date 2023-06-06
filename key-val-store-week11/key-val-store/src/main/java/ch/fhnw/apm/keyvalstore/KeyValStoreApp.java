@@ -17,7 +17,7 @@ public class KeyValStoreApp {
 
     @Bean
     Storage storage() {
-        return new CachedStorage(10, new ClusterStorage("ClusterStorage"));
-        //return new ClusterStorage("ClusterStorage");
+        //return new CachedStorage(10, new ClusterStorage("ClusterStorage"));
+        return new ClusterStorage("ClusterStorage");
     }
 }
