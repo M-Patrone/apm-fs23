@@ -5,7 +5,25 @@ services:
     build: .
     deploy:
       replicas: 2
-  load-balancer:
-    build: load-balancer
+  load-balancer-master:
+    build:
+      context: load-balancer
+      args:
+        role: master
+    cap_add:
+       - NET_ADMIN
+  load-balancer-backup:
+    build:
+      context: load-balancer
+      args:
+        role: backup
+    cap_add:
+      - NET_ADMIN
     ports:
       - 8080:8080
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.19.0.0/16
+          gateway: 172.19.0.1
