@@ -1,5 +1,6 @@
 package ch.fhnw.apm.keyvalstore;
 
+import ch.fhnw.apm.keyvalstore.storage.CachedStorage;
 import ch.fhnw.apm.keyvalstore.storage.ClusterStorage;
 import ch.fhnw.apm.keyvalstore.storage.LocalStorage;
 import ch.fhnw.apm.keyvalstore.storage.Storage;
@@ -17,6 +18,7 @@ public class KeyValStoreApp {
     @Bean
     Storage storage() {
         //return new LocalStorage();
-        return new ClusterStorage("HazelcastStorage");
+       return new ClusterStorage("HazelcastStorage");
+        //return new CachedStorage(10,new ClusterStorage("hazelcastStorage"));
     }
 }
